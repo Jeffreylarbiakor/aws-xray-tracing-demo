@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+
+Description: >
+  AWS X-Ray distributed-tracing demo.
+  API Gateway -> api Lambda -> worker Lambda + DynamoDB.
+  Fault switch via ?fault=slow|error for QA investigation.
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 15          # enough for the 2s slow fault + overhead
+    Tracing: Active      # X-Ray active tracing on every Lambda
+
+Resources:
+
+  # ── HTTP API ──────────────────────────────────────────────────────────────
+  TracingApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      # X-Ray tracing on HTTP API is enabled at the stage level
+      DefaultRouteSettings:
+        DetailedMetricsEnabled: true
+      Tags:
+        Project: xray-demo
+
+  # ── DynamoDB table ────────────────────────────────────────────────────────
+  ResultsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: xray-demo-results
+      BillingMode: PAY_PER_REQUEST   # free-tier-friendly; no provisioned cost
+      AttributeDefinitions:
+        - AttributeName: requestId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: requestId
+          KeyType: HASH
+      Tags:
+        - Key: Project
+          Value: xray-demo
+
+  # ── Worker Lambda ─────────────────────────────────────────────────────────
+  WorkerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: xray-demo-worker
+      CodeUri: src/worker/
+      Handler: handler.lambda_handler
+      Description: "Downstream worker — honours ?fault=slow|error for demo"
+      Tags:
+        Project: xray-demo
+
+  # ── API Lambda ────────────────────────────────────────────────────────────
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: xray-demo-api
+      CodeUri: src/api/
+      Handler: handler.lambda_handler
+      Description: "Front-door Lambda — calls worker and writes to DynamoDB"
+      Environment:
+        Variables:
+          WORKER_FUNCTION_NAME: !Ref WorkerFunction
+          TABLE_NAME: !Ref ResultsTable
+      Policies:
+        # Allow invoking the worker Lambda
+        - Statement:
+            - Effect: Allow
+              Action: lambda:InvokeFunction
+              Resource: !GetAtt WorkerFunction.Arn
+        # Allow writing to DynamoDB
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ResultsTable
+      Events:
+        RootGet:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TracingApi
+            Path: /trace
+            Method: GET
+      Tags:
+        Project: xray-demo
+
+Outputs:
+  ApiEndpoint:
+    Description: "HTTP API endpoint — append /trace?fault=slow|error to test"
+    Value: !Sub "https://${TracingApi}.execute-api.${AWS::Region}.amazonaws.com/trace"
