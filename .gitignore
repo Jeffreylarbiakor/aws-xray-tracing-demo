@@ -1,0 +1,27 @@
+# SAM build artifacts
+.aws-sam/
+
+# SAM deploy config (contains account/region — don't commit)
+samconfig.toml
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+*.egg-info/
+
+# AWS credentials — never commit these
+.env
+.aws/
+credentials
+*.pem
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
