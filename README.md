@@ -110,7 +110,7 @@ You should see four nodes connected left-to-right:
 and a DynamoDB node hanging off `xray-demo-api`.
 Nodes with errors glow amber/red; hover a node to see its latency distribution.
 
-📸 _Screenshot placeholder:_
+_Service map — Client → xray-demo-api → xray-demo-worker + DynamoDB. Amber rings on the worker nodes indicate requests with injected faults._
 ![Service map](docs/service-map.png)
 
 ---
@@ -125,7 +125,7 @@ Click any trace. The timeline shows:
 
 Total duration: well under 500 ms. No errors.
 
-📸 _Screenshot placeholder:_
+_Healthy trace (~95ms) — all segments green, `process` subsegment completes in 0ms, no errors anywhere in the chain._
 ![Healthy trace](docs/trace-healthy.png)
 
 ---
@@ -140,7 +140,7 @@ Click any trace. The timeline shows:
 
 **Root cause is immediately visible:** the worker's `process` subsegment accounts for ~2 s out of the total ~2.1 s request duration.
 
-📸 _Screenshot placeholder:_
+_Slow trace (~2.1s) — the `process` subsegment inside xray-demo-worker spans 2.00s, accounting for nearly the entire request duration. DynamoDB (18ms) is ruled out immediately._
 ![Slow trace](docs/trace-slow.png)
 
 ---
@@ -154,7 +154,7 @@ Click any trace. You'll see:
 - The annotation `error = true` is visible in the segment detail panel
 - The `xray-demo-api` segment returns HTTP 500, propagating the fault upward
 
-📸 _Screenshot placeholder:_
+_Error trace — the `process` subsegment inside xray-demo-worker is flagged Fault (red ✕), with the RuntimeError visible in the segment detail. The api Lambda propagates HTTP 500 upward._
 ![Error trace](docs/trace-error.png)
 
 ---
@@ -189,22 +189,3 @@ sam delete --stack-name xray-tracing-demo
 # and the CloudWatch log groups created by SAM. Nothing billable is left behind.
 ```
 
----
-
-## Adding screenshots
-
-After you deploy, generate traffic, and capture the four console screenshots, add them here:
-
-```
-docs/service-map.png    — CloudWatch → X-Ray → Service map
-docs/trace-healthy.png  — a trace with fault_mode = "none"
-docs/trace-slow.png     — a trace with fault_mode = "slow"
-docs/trace-error.png    — a trace with fault_mode = "error"
-```
-
-Then commit:
-```bash
-git add docs/
-git commit -m "docs: add X-Ray console screenshots"
-git push
-```
