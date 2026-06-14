@@ -43,6 +43,8 @@ X-Ray active tracing is enabled on API Gateway and both Lambdas. `aws-xray-sdk`'
 
 Your IAM user needs: `AWSLambda_FullAccess`, `AmazonDynamoDBFullAccess`, `AmazonAPIGatewayAdministrator`, `AWSCloudFormationFullAccess`, `IAMFullAccess`, `AWSXRayFullAccess`.
 
+> These are intentionally broad for a demo. A production setup would scope each down to the specific actions and resources required (e.g. `lambda:CreateFunction` on a specific ARN prefix rather than `AWSLambda_FullAccess`).
+
 ---
 
 ## Deploy
